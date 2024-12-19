@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Asistente GPT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+        }
+        
+        #response {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+        
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="input-container">
+        <input type="text" id="messageInput" placeholder="Escribe tu mensaje">
+        <button onclick="sendMessage()" id="sendButton">Enviar</button>
+    </div>
+    <div id="response"></div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const responseDiv = document.getElementById('response');
+
+        async function sendMessage() {
+            // Deshabilitar botón y mostrar estado de carga
+            sendButton.disabled = true;
+            messageInput.disabled = true;
+            responseDiv.innerHTML = '<div class="loading">Enviando mensaje...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:5000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        message: messageInput.value 
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                responseDiv.innerHTML = data.response;
+                messageInput.value = ''; // Limpiar input después de envío exitoso
+                
+            } catch (error) {
+                responseDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                console.error('Error:', error);
+            } finally {
+                // Rehabilitar controles
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+            }
+        }
+
+        // Permitir envío con Enter
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !sendButton.disabled) {
+                sendMessage();
+            }
+        });
+
+        // Verificar conexión al cargar
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('http://localhost:5000/test');
+                const data = await response.json();
+                console.log('API Status:', data.status);
+            } catch (error) {
+                responseDiv.innerHTML = '<div class="error">Error: No se puede conectar con el servidor. Asegúrate de que el servidor Python esté ejecutándose.</div>';
+            }
+        });
+    </script>
+</body>
+</html> 
